@@ -344,6 +344,12 @@
       <div class="admin-module-tabs" id="adminModuleTabs"><button class="active" data-admin-module="products">สินค้า</button><button data-admin-module="articles">บทความความรู้</button></div>
       <div id="adminProductsModule">
       <div class="admin-filter-block"><div class="admin-filter-title">แยกประเภทรถ</div><div class="admin-filter-chips" id="adminTypeFilters"></div><div class="admin-filter-title">แยกตามแบรนด์</div><div class="admin-filter-chips" id="adminBrandFilters"></div></div>
+      <div class="admin-data-tools">
+        <div class="admin-data-tools-head"><div><span class="admin-kicker">DATA MANAGEMENT</span><strong>ข้อมูลสินค้า Excel</strong><small>ดาวน์โหลด / อัปโหลดเฉพาะข้อมูล ไม่รวมรูปภาพ</small></div><span class="xlsx-badge">.XLSX</span></div>
+        <div class="admin-data-tools-actions"><button type="button" class="btn btn-soft small" id="exportProductsBtn">↓ ดาวน์โหลดข้อมูล</button><button type="button" class="btn btn-dark small" id="importProductsBtn">↑ อัปโหลดข้อมูล</button><input id="productImportInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></div>
+        <div class="admin-data-tools-note">ใช้รหัสสินค้าเพื่อจับคู่และอัปเดตข้อมูลเดิม · สินค้าใหม่เว้นรหัสได้ · รูปภาพเดิมจะไม่ถูกเปลี่ยน</div>
+        <div class="admin-import-status" id="productImportStatus" hidden></div>
+      </div>
       <div class="admin-list-head"><span>สินค้าในระบบ</span><label><input id="adminSearch" placeholder="ค้นหารถ...">⌕</label></div>
       <div class="admin-product-list" id="adminProductList"></div>
       <div class="admin-footer-note">การแก้ไขในโหมด Demo จะบันทึกไว้ในเครื่องนี้เท่านั้น</div>
@@ -389,6 +395,7 @@
     </section>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

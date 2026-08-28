@@ -439,6 +439,18 @@ body.admin-open .admin-panel { transform: translateX(0); }
 .admin-stats div:nth-child(3) strong { color: #b36c0a; }
 .admin-actions { display: flex; gap: 8px; }
 .admin-actions .btn { flex: 1; }
+.admin-data-tools { margin-top: 14px; border: 1px solid #dfe5ed; border-radius: 12px; padding: 12px; background: #f8fafc; }
+.admin-data-tools-head { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+.admin-data-tools-head > div { display: flex; flex-direction: column; gap: 3px; }
+.admin-data-tools-head strong { color: var(--navy); font-size: 12px; }
+.admin-data-tools-head small { color: #8692a1; font-size: 9px; line-height: 1.4; }
+.xlsx-badge { border-radius: 6px; padding: 5px 6px; color: #217346; background: #e8f5ed; font-size: 9px; font-weight: 900; }
+.admin-data-tools-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 11px; }
+.admin-data-tools-actions .btn { min-width: 0; }
+.admin-data-tools-note { margin-top: 9px; color: #8c97a5; font-size: 9px; line-height: 1.5; }
+.admin-import-status { margin-top: 9px; border-radius: 7px; padding: 8px 9px; color: #246442; background: #eaf7ee; font-size: 9px; line-height: 1.45; }
+.admin-import-status.warning { color: #875b12; background: #fff5df; }
+.admin-import-status.error { color: #a52c35; background: #fff0f1; }
 .admin-module-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 18px; border-radius: 10px; padding: 4px; background: #f1f4f7; }
 .admin-module-tabs button { border: 0; border-radius: 7px; padding: 9px 7px; color: #7c8795; background: transparent; font-size: 10px; font-weight: 900; }
 .admin-module-tabs button:hover, .admin-module-tabs button.active { color: var(--navy); background: #fff; box-shadow: 0 3px 8px rgba(23,34,54,.08); }

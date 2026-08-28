@@ -21,6 +21,40 @@ const vehicleTypeOptions = [
 
 const brandOptions = ["Zontes", "GPX", "EM", "Royal alloy", "Honda", "Rhino", "K-Lion", "Champi"];
 
+const productXlsxColumns = [
+  ["id", "รหัสสินค้า"],
+  ["brand", "แบรนด์"],
+  ["model", "รุ่น/ชื่อสินค้า"],
+  ["vehicleType", "ประเภทรถ"],
+  ["category", "ระบบขับเคลื่อน"],
+  ["price", "ราคาเงินสด"],
+  ["monthly", "ค่างวดเริ่มต้น"],
+  ["stock", "สต๊อก"],
+  ["branch", "สาขาหลัก"],
+  ["availability", "สถานะ"],
+  ["promo", "โปรโมชัน"],
+  ["color", "สีเด่น"],
+  ["description", "รายละเอียด"],
+  ["specs", "สเปก"]
+];
+
+const productImportAliases = {
+  id: ["รหัสสินค้า", "sku", "id", "รหัส"],
+  brand: ["แบรนด์", "brand"],
+  model: ["รุ่น/ชื่อสินค้า", "รุ่น", "ชื่อสินค้า", "model", "product name"],
+  vehicleType: ["ประเภทรถ", "ประเภทสินค้าหลัก", "vehicle type", "vehicletype"],
+  category: ["ระบบขับเคลื่อน", "หมวด", "category"],
+  price: ["ราคาเงินสด", "ราคา", "price", "cash price"],
+  monthly: ["ค่างวดเริ่มต้น", "ค่างวด", "monthly", "monthly payment"],
+  stock: ["สต๊อก", "สต็อก", "stock", "จำนวน"],
+  branch: ["สาขาหลัก", "สาขา", "branch"],
+  availability: ["สถานะ", "สถานะรถ", "availability", "status"],
+  promo: ["โปรโมชัน", "โปรโมชั่น", "promo", "promotion"],
+  color: ["สีเด่น", "สี", "color"],
+  description: ["รายละเอียด", "ข้อความสั้น", "description"],
+  specs: ["สเปก", "ข้อมูลจำเพาะ", "specs", "specifications"]
+};
+
 const defaultArticles = [
   { id: "finance-101", title: "เงินเดือนเท่านี้ ออกรถได้ไหม?", category: "การเงิน / ไฟแนนซ์", status: "published", author: "ทีม Denha Motor", excerpt: "เช็กงบที่เหมาะกับคุณ ก่อนคุยกับไฟแนนซ์จริง", content: "เริ่มจากรายได้ ภาระผ่อน และงบที่สบายใจ แล้วค่อยเลือกรถที่เหมาะกับชีวิตประจำวัน", seoTitle: "เงินเดือนเท่านี้ ออกรถได้ไหม? | Denha Motor", seoDescription: "แนวทางเช็กงบออกรถและค่างวดเบื้องต้นสำหรับลูกค้าเด่นห้า", featured: true, updatedAt: "2026-08-28T08:00:00.000Z" },
   { id: "ev-2-or-3", title: "EV 2 ล้อ กับ EV 3 ล้อ เลือกแบบไหน?", category: "รถและการใช้งาน", status: "published", author: "ทีม Denha Motor", excerpt: "เปรียบเทียบรูปแบบการใช้งาน พื้นที่ และความคุ้มค่า", content: "ดูความแตกต่างของ EV แต่ละประเภทก่อนเลือกคันที่ตรงกับงานและการเดินทางของคุณ", seoTitle: "EV 2 ล้อ กับ EV 3 ล้อ เลือกแบบไหน?", seoDescription: "เปรียบเทียบรถไฟฟ้า 2 ล้อและ 3 ล้อ", featured: false, updatedAt: "2026-08-27T08:00:00.000Z" },
@@ -99,6 +133,196 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function normalizeImportText(value) {
+  return String(value === undefined || value === null ? "" : value).trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function importValue(row, aliases) {
+  const keys = Object.keys(row);
+  const normalizedAliases = aliases.map(normalizeImportText);
+  const key = keys.find(function(candidate) { return normalizedAliases.indexOf(normalizeImportText(candidate)) >= 0; });
+  return key === undefined ? "" : row[key];
+}
+
+function importNumber(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const parsed = typeof value === "number" ? value : Number(String(value).replace(/[,฿บาท\s]/g, ""));
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : null;
+}
+
+function importedVehicleType(value, fallback) {
+  const normalized = normalizeImportText(value);
+  if (!normalized) return fallback || "standard";
+  const match = vehicleTypeOptions.find(function(option) { return normalized === option[0] || normalized === normalizeImportText(option[1]); });
+  if (match) return match[0];
+  if (normalized.indexOf("มือสอง") >= 0 || normalized.indexOf("รถสวย") >= 0 || normalized === "used") return "used";
+  if (normalized.indexOf("ไฟฟ้าสาม") >= 0 || normalized === "ev3") return "ev3";
+  if (normalized.indexOf("ไฟฟ้าสอง") >= 0 || normalized === "ev2") return "ev2";
+  if (normalized.indexOf("atv") >= 0) return "atv";
+  if (normalized.indexOf("สามล้อบรรทุก") >= 0 || normalized === "cargo3") return "cargo3";
+  if (normalized.indexOf("จักรยานยนต์") >= 0 || normalized === "standard") return "standard";
+  return fallback || "standard";
+}
+
+function importedCategory(value, vehicleType, fallback) {
+  const normalized = normalizeImportText(value);
+  if (!normalized) return fallback || (vehicleType === "used" ? "used" : vehicleType === "ev2" || vehicleType === "ev3" ? "ev" : vehicleType === "atv" || vehicleType === "cargo3" ? "utility" : "gas");
+  if (normalized === "gas" || normalized.indexOf("น้ำมัน") >= 0) return "gas";
+  if (normalized === "ev" || normalized.indexOf("ไฟฟ้า") >= 0) return "ev";
+  if (normalized === "utility" || normalized.indexOf("ใช้งาน") >= 0 || normalized.indexOf("atv") >= 0) return "utility";
+  if (normalized === "used" || normalized.indexOf("มือสอง") >= 0 || normalized.indexOf("รถสวย") >= 0) return "used";
+  return fallback || "gas";
+}
+
+function importedAvailability(value, stock, fallback) {
+  const normalized = normalizeImportText(value);
+  if (normalized === "available" || normalized.indexOf("พร้อมส่ง") >= 0) return "available";
+  if (normalized === "low" || normalized.indexOf("เหลือน้อย") >= 0 || normalized.indexOf("เหลือ1") >= 0) return "low";
+  if (normalized === "preorder" || normalized.indexOf("สั่งจอง") >= 0) return "preorder";
+  if (normalized === "soldout" || normalized.indexOf("หมด") >= 0) return "soldout";
+  if (fallback) return fallback;
+  return stock === 0 ? "soldout" : stock === 1 ? "low" : "available";
+}
+
+function availabilityLabel(value) {
+  return { available: "พร้อมส่ง", low: "เหลือน้อย", preorder: "สั่งจอง", soldout: "หมดชั่วคราว" }[value] || "พร้อมส่ง";
+}
+
+function categoryExportLabel(value) {
+  return { gas: "รถน้ำมัน", ev: "EV", utility: "รถใช้งาน", used: "มือสอง" }[value] || "รถน้ำมัน";
+}
+
+function productImportStatus(message, type) {
+  const status = document.getElementById("productImportStatus");
+  if (!status) return;
+  status.hidden = false;
+  status.className = "admin-import-status " + (type || "success");
+  status.textContent = message;
+}
+
+function exportProductsToXlsx() {
+  if (!window.XLSX) {
+    showToast("ยังโหลดเครื่องมือ Excel ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    return;
+  }
+  const rows = products.map(function(product) {
+    const row = {};
+    productXlsxColumns.forEach(function(column) {
+      const key = column[0];
+      let value = product[key] === undefined || product[key] === null ? "" : product[key];
+      if (key === "vehicleType") value = vehicleTypeLabel(product);
+      if (key === "category") value = categoryExportLabel(product.category);
+      if (key === "availability") value = availabilityLabel(product.availability);
+      if (key === "specs") value = (product.specs || []).join(" | ");
+      row[column[1]] = value;
+    });
+    return row;
+  });
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  worksheet["!cols"] = [
+    { wch: 22 }, { wch: 14 }, { wch: 24 }, { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 16 },
+    { wch: 10 }, { wch: 23 }, { wch: 14 }, { wch: 28 }, { wch: 18 }, { wch: 55 }, { wch: 50 }
+  ];
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "สินค้า");
+  const date = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(workbook, "denha-products-" + date + ".xlsx");
+  productImportStatus("ดาวน์โหลดข้อมูลสินค้า " + products.length + " รายการแล้ว · ไฟล์นี้ไม่มีรูปภาพ", "success");
+  showToast("ดาวน์โหลดข้อมูลสินค้าเป็น .xlsx แล้ว");
+}
+
+async function importProductsFromXlsx(event) {
+  const input = event.currentTarget;
+  const file = input.files && input.files[0];
+  if (!file) return;
+  input.value = "";
+  if (!window.XLSX) {
+    productImportStatus("ยังโหลดเครื่องมือ Excel ไม่สำเร็จ กรุณารีเฟรชหน้าแล้วลองใหม่", "error");
+    showToast("ยังโหลดเครื่องมือ Excel ไม่สำเร็จ");
+    return;
+  }
+  if (!/\.xlsx$/i.test(file.name)) {
+    productImportStatus("รองรับเฉพาะไฟล์ .xlsx เท่านั้น", "error");
+    showToast("กรุณาเลือกไฟล์ .xlsx เท่านั้น");
+    return;
+  }
+  try {
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: false });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = firstSheet ? XLSX.utils.sheet_to_json(firstSheet, { defval: "", raw: true }) : [];
+    if (!rows.length) throw new Error("ไม่พบข้อมูลในแผ่นงาน");
+    const nextProducts = products.slice();
+    let added = 0;
+    let updated = 0;
+    let skipped = 0;
+    const errors = [];
+    const seenIds = {};
+    rows.forEach(function(row, index) {
+      const rowNumber = index + 2;
+      const rawId = String(importValue(row, productImportAliases.id) || "").trim();
+      const brand = String(importValue(row, productImportAliases.brand) || "").trim();
+      const model = String(importValue(row, productImportAliases.model) || "").trim();
+      const price = importNumber(importValue(row, productImportAliases.price));
+      const monthly = importNumber(importValue(row, productImportAliases.monthly));
+      const stock = importNumber(importValue(row, productImportAliases.stock));
+      if (!brand || !model || price === null || monthly === null || stock === null) {
+        skipped += 1;
+        errors.push("แถว " + rowNumber + ": ต้องมีแบรนด์ รุ่น ราคา ค่างวด และสต๊อก");
+        return;
+      }
+      const existingIndex = rawId ? nextProducts.findIndex(function(product) { return product.id === rawId; }) : -1;
+      if (rawId && seenIds[rawId]) {
+        skipped += 1;
+        errors.push("แถว " + rowNumber + ": รหัสสินค้า " + rawId + " ซ้ำในไฟล์");
+        return;
+      }
+      const existing = existingIndex >= 0 ? nextProducts[existingIndex] : null;
+      const id = rawId || (brand + "-" + model).toLowerCase().replace(/[^a-z0-9ก-๙]+/gi, "-").replace(/^-|-$/g, "") + "-" + Date.now().toString().slice(-4) + index;
+      const vehicleType = importedVehicleType(importValue(row, productImportAliases.vehicleType), existing && existing.vehicleType);
+      const category = importedCategory(importValue(row, productImportAliases.category), vehicleType, existing && existing.category);
+      const specsText = String(importValue(row, productImportAliases.specs) || "").trim();
+      const specs = specsText ? specsText.split(/[|;\n]+/).map(function(spec) { return spec.trim(); }).filter(Boolean) : (existing && existing.specs) || ["รอเพิ่มสเปก", "สอบถามสาขา", "ดูรายละเอียด", "พร้อมให้คำแนะนำ"];
+      const next = Object.assign({}, existing || {}, {
+        id: id,
+        brand: brand,
+        model: model,
+        vehicleType: vehicleType,
+        category: category,
+        price: price,
+        monthly: monthly,
+        stock: stock,
+        branch: String(importValue(row, productImportAliases.branch) || (existing && existing.branch) || "เชียงราย สำนักงานใหญ่").trim(),
+        availability: importedAvailability(importValue(row, productImportAliases.availability), stock, existing && existing.availability),
+        promo: String(importValue(row, productImportAliases.promo) || "").trim(),
+        color: String(importValue(row, productImportAliases.color) || "").trim(),
+        description: String(importValue(row, productImportAliases.description) || "").trim(),
+        specs: specs,
+        image: existing ? existing.image || "" : ""
+      });
+      if (existingIndex >= 0) {
+        nextProducts[existingIndex] = next;
+        updated += 1;
+      } else {
+        nextProducts.unshift(next);
+        added += 1;
+      }
+      if (rawId) seenIds[rawId] = true;
+    });
+    if (!added && !updated) throw new Error("ไม่มีข้อมูลที่ผ่านการตรวจสอบ");
+    products = nextProducts;
+    saveProducts();
+    renderProducts();
+    renderAdmin();
+    populateCalculator();
+    const detail = errors.length ? " ข้าม " + errors.length + " แถว" : "";
+    productImportStatus("นำเข้าสำเร็จ · เพิ่มใหม่ " + added + " · อัปเดต " + updated + " · รูปภาพเดิมไม่เปลี่ยน" + detail, errors.length ? "warning" : "success");
+    showToast("นำเข้าข้อมูลสินค้าเรียบร้อยแล้ว");
+  } catch (error) {
+    productImportStatus("นำเข้าไม่สำเร็จ: " + error.message, "error");
+    showToast("นำเข้าไฟล์ไม่สำเร็จ กรุณาตรวจสอบรูปแบบข้อมูล");
+  }
 }
 
 function categoryLabel(category) {
@@ -607,6 +831,9 @@ document.getElementById("adminTrigger").addEventListener("click", function() {
 document.getElementById("adminClose").addEventListener("click", closeAdminPanel);
 document.getElementById("newProductBtn").addEventListener("click", function() { openEditor(""); });
 document.getElementById("inventoryBtn").addEventListener("click", function() { showToast("เปิดมุมมองสต๊อกแล้ว — ใช้ปุ่มแก้ไขเพื่อปรับยอดใน Demo"); });
+document.getElementById("exportProductsBtn").addEventListener("click", exportProductsToXlsx);
+document.getElementById("importProductsBtn").addEventListener("click", function() { document.getElementById("productImportInput").click(); });
+document.getElementById("productImportInput").addEventListener("change", importProductsFromXlsx);
 document.getElementById("adminSearch").addEventListener("input", renderAdmin);
 document.getElementById("adminTypeFilters").addEventListener("click", function(event) {
   const button = event.target.closest("[data-admin-type]");

@@ -380,6 +380,21 @@ Form เทิร์นรถ:
 - Bulk action เฉพาะสิทธิ์ที่อนุญาต: publish, unpublish, archive, เปลี่ยนหมวด
 - Confirm dialog สำหรับ archive/delete
 
+### 4.2.1 นำเข้าและส่งออกข้อมูลสินค้า Excel
+
+ในศูนย์จัดการรถให้มีปุ่ม `ดาวน์โหลดข้อมูล` และ `อัปโหลดข้อมูล` สำหรับไฟล์ `.xlsx` โดยใช้เพื่อจัดการข้อมูลสินค้าเป็นชุดเท่านั้น และไม่รวมรูปภาพหรือไฟล์สื่อใด ๆ
+
+- Export สร้างไฟล์ `.xlsx` จากสินค้าที่มีอยู่ในระบบ โดยมี worksheet ชื่อ `สินค้า`
+- คอลัมน์มาตรฐาน: รหัสสินค้า, แบรนด์, รุ่น/ชื่อสินค้า, ประเภทรถ, ระบบขับเคลื่อน, ราคาเงินสด, ค่างวดเริ่มต้น, สต๊อก, สาขาหลัก, สถานะ, โปรโมชัน, สีเด่น, รายละเอียด และสเปก
+- ตัวเลขราคา ค่างวด และสต๊อกต้องถูกเก็บเป็นตัวเลขใน workbook ไม่ใช่ข้อความที่มี comma หรือสกุลเงินปน
+- Import รับเฉพาะ `.xlsx` และตรวจสอบนามสกุล, header, ชนิดข้อมูล, ค่าติดลบ และฟิลด์ที่จำเป็นก่อนบันทึก
+- ใช้ `รหัสสินค้า` เป็น key สำหรับ update สินค้าเดิม; แถวที่ไม่มีรหัสจะสร้างสินค้าใหม่และสร้างรหัสอัตโนมัติ
+- การ import เป็นแบบ upsert: เพิ่มสินค้าใหม่หรืออัปเดตสินค้าที่มีรหัสตรงกัน และไม่ลบสินค้าที่ไม่ได้อยู่ในไฟล์
+- รูปภาพของสินค้าเดิมต้องคงอยู่เสมอเมื่อ import; สินค้าใหม่ที่ import จาก Excel จะยังไม่มีรูปและให้เพิ่มผ่าน Media editor
+- แสดงผลสรุปหลัง import: จำนวนเพิ่มใหม่, จำนวนอัปเดต, จำนวนแถวที่ข้าม และเหตุผลของแถวที่ไม่ผ่าน validation
+- ต้องมี template/example workbook ให้ผู้ดูแลดาวน์โหลดได้ในอนาคต โดยใช้ header ชุดเดียวกับ export
+- ในระยะ prototype ที่ใช้ browser storage การเปลี่ยนแปลงจะอยู่เฉพาะ browser/อุปกรณ์นั้น; production ต้องประมวลผล import/export ผ่าน server และบันทึก audit log
+
 ### 4.3 Product edit form
 
 แบ่งเป็น tab เพื่อไม่ให้ฟอร์มยาวเกินไป:
@@ -745,6 +760,8 @@ Public API ต้องคืนเฉพาะ field ที่ผู้ใช�
 | POST | /admin/products/[id]/archive | product.archive |
 | POST | /admin/products/[id]/duplicate | product.create |
 | DELETE | /admin/products/[id] | product.delete, จำกัด super_admin |
+| GET | /admin/products/export.xlsx | product.read |
+| POST | /admin/products/import.xlsx | product.create, product.update |
 | POST | /admin/products/[id]/media | media.update |
 | DELETE | /admin/products/[id]/media/[mediaId] | media.update |
 | PATCH | /admin/products/[id]/media/reorder | media.update |
@@ -984,6 +1001,10 @@ Codex สามารถเลือก stack ที่เข้ากับ rep
 - [ ] Admin อัปโหลด เรียง ตั้งภาพหลัก แก้ alt text และลบรูปได้ตามสิทธิ์
 - [ ] Admin ผูก promotion กับสินค้าและสาขาได้
 - [ ] Admin ปรับสต๊อกผ่าน stock movement ที่มีเหตุผลทุกครั้ง
+- [ ] Admin ดาวน์โหลดข้อมูลสินค้าเป็น `.xlsx` ได้โดยไฟล์ไม่มีรูปภาพหรือข้อมูลลับ
+- [ ] Admin อัปโหลด `.xlsx` เพื่อเพิ่ม/อัปเดตสินค้าแบบ upsert โดยใช้รหัสสินค้าเป็น key
+- [ ] Import ตรวจสอบ header และตัวเลขราคา/ค่างวด/สต๊อก พร้อมสรุปแถวที่ไม่ผ่าน validation
+- [ ] Import ไม่เปลี่ยนหรือลบรูปภาพเดิมของสินค้าที่มีรหัสตรงกัน
 - [ ] ระบบไม่ยอมให้สต๊อกติดลบ
 - [ ] เมื่อสต๊อกเป็น 0 สถานะและ CTA ฝั่ง public เปลี่ยนตามกติกา
 - [ ] branch_manager แก้ได้เฉพาะข้อมูลในสาขาที่ตนดูแล
@@ -1039,6 +1060,7 @@ Codex สามารถเลือก stack ที่เข้ากับ rep
 - Price history
 - Inventory per branch
 - Stock movements
+- Product data import/export `.xlsx` (ไม่รวมรูปภาพ)
 - Publish/unpublish/archive
 - Promotion CRUD
 - Permission scope ตามสาขา
