@@ -461,13 +461,20 @@ body.admin-open .admin-panel { transform: translateX(0); }
 .admin-filter-chip b { margin-left: 3px; color: #a5afbc; font-size: 8px; }
 .admin-filter-chip:hover, .admin-filter-chip.active { border-color: var(--navy); color: #fff; background: var(--navy); }
 .admin-filter-chip:hover b, .admin-filter-chip.active b { color: #b9c6dd; }
+.admin-filter-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 9px; color: #7d8998; font-size: 9px; }
+.admin-filter-tools button { border: 0; border-radius: 6px; padding: 5px 7px; color: var(--red); background: #fff1f2; font-size: 9px; font-weight: 900; }
+.admin-filter-tools button:hover { color: #fff; background: var(--red); }
 .admin-list-head { display: flex; align-items: center; justify-content: space-between; margin-top: 25px; margin-bottom: 9px; color: var(--navy); font-size: 12px; font-weight: 900; }
+.admin-list-head > span { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.admin-list-head > span small { color: #909baa; font-size: 9px; font-weight: 700; white-space: nowrap; }
 .admin-list-head label { position: relative; }
 .admin-list-head input { width: 130px; padding: 7px 22px 7px 8px; font-size: 10px; }
 .admin-list-head label { color: #95a0ae; font-size: 15px; }
 .admin-product-list { flex: 1; overflow: auto; padding-right: 3px; }
 .admin-product-row { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 10px; border-bottom: 1px solid #edf0f4; padding: 12px 0; }
-.admin-thumb { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 9px; color: #fff; background: var(--navy); font-size: 11px; font-weight: 900; }
+.admin-thumb { display: grid; width: 40px; height: 40px; place-items: center; overflow: hidden; border-radius: 9px; color: #fff; background: var(--navy); font-size: 11px; font-weight: 900; }
+.admin-thumb.has-image { background: #f0f3f6; }
+.admin-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .admin-product-row:nth-child(3n) .admin-thumb { background: var(--red); }.admin-product-row:nth-child(3n+1) .admin-thumb { background: #3b7a71; }
 .admin-product-row > span:nth-child(2) { display: flex; flex-direction: column; min-width: 0; }
 .admin-product-row strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }

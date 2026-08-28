@@ -517,9 +517,9 @@ function renderAdmin() {
   const search = (document.getElementById("adminSearch") || {}).value || "";
   const query = search.trim().toLowerCase();
   const list = products.filter(function(product) {
-    const matchesQuery = !query || (product.brand + " " + product.model + " " + product.id).toLowerCase().indexOf(query) >= 0;
+    const matchesQuery = !query || (String(product.brand || "") + " " + String(product.model || "") + " " + String(product.id || "")).toLowerCase().indexOf(query) >= 0;
     const matchesType = adminTypeFilter === "all" || product.vehicleType === adminTypeFilter;
-    const matchesBrand = adminBrandFilter === "all" || product.brand.toLowerCase() === adminBrandFilter.toLowerCase();
+    const matchesBrand = adminBrandFilter === "all" || normalizeAdminBrand(product.brand) === normalizeAdminBrand(adminBrandFilter);
     return matchesQuery && matchesType && matchesBrand;
   });
   const total = document.getElementById("adminTotal");
@@ -528,13 +528,36 @@ function renderAdmin() {
   if (total) total.textContent = products.length;
   if (ready) ready.textContent = products.filter(function(product) { return product.stock > 0; }).length;
   if (low) low.textContent = products.filter(function(product) { return product.stock === 1; }).length;
+  const hasFilters = Boolean(query) || adminTypeFilter !== "all" || adminBrandFilter !== "all";
+  const filterSummary = document.getElementById("adminFilterSummary");
+  const listSummary = document.getElementById("adminListSummary");
+  const summaryText = hasFilters ? "แสดง " + list.length + " จาก " + products.length + " คัน" : "แสดงรถทั้งหมด " + products.length + " คัน";
+  if (filterSummary) filterSummary.textContent = summaryText;
+  if (listSummary) listSummary.textContent = summaryText;
   const panelList = document.getElementById("adminProductList");
   if (!panelList) return;
   panelList.innerHTML = list.length ? list.map(function(product) {
     const stock = getStockState(product);
-    return '<div class="admin-product-row"><span class="admin-thumb">' + escapeHtml(product.brand.slice(0, 2).toUpperCase()) + '</span><span><strong>' + escapeHtml(product.brand + " " + product.model) + '</strong><small>' + escapeHtml(vehicleTypeLabel(product)) + ' · ' + money(product.price) + ' บาท · ' + escapeHtml(product.branch) + '</small></span><span><span class="admin-stock ' + stock.className + '">' + (product.stock > 0 ? "สต๊อก " + product.stock : "หมด") + '</span><button class="admin-row-btn" data-action="edit" data-id="' + escapeHtml(product.id) + '">แก้ไข</button></span></div>';
+    const brand = String(product.brand || "");
+    const model = String(product.model || "");
+    const thumb = product.image ? '<img src="' + escapeHtml(product.image) + '" alt="" loading="lazy">' : escapeHtml(brand.slice(0, 2).toUpperCase());
+    return '<div class="admin-product-row"><span class="admin-thumb' + (product.image ? ' has-image' : '') + '">' + thumb + '</span><span><strong>' + escapeHtml(brand + " " + model) + '</strong><small>' + escapeHtml(vehicleTypeLabel(product)) + ' · ' + money(product.price) + ' บาท · ' + escapeHtml(product.branch) + '</small></span><span><span class="admin-stock ' + stock.className + '">' + (product.stock > 0 ? "สต๊อก " + product.stock : "หมด") + '</span><button class="admin-row-btn" data-action="edit" data-id="' + escapeHtml(product.id) + '" aria-label="แก้ไข ' + escapeHtml(brand + " " + model) + '">แก้ไข</button></span></div>';
   }).join("") : '<div class="empty-admin">ไม่พบสินค้าที่ค้นหา</div>';
   renderAdminFilters();
+}
+
+function normalizeAdminBrand(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getAdminBrandOptions() {
+  const seen = {};
+  return brandOptions.concat(products.map(function(product) { return String(product.brand || "").trim(); })).filter(function(brand) {
+    const key = normalizeAdminBrand(brand);
+    if (!key || seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
 }
 
 function renderAdminFilters() {
@@ -546,9 +569,18 @@ function renderAdminFilters() {
   typeWrap.innerHTML = '<button class="admin-filter-chip ' + (adminTypeFilter === "all" ? "active" : "") + '" data-admin-type="all">ทั้งหมด <b>' + products.length + '</b></button>' +
     vehicleTypeOptions.map(function(option) { return '<button class="admin-filter-chip ' + (adminTypeFilter === option[0] ? "active" : "") + '" data-admin-type="' + option[0] + '">' + option[1] + ' <b>' + (typeCounts[option[0]] || 0) + '</b></button>'; }).join("");
   const brandCounts = {};
-  products.forEach(function(product) { brandCounts[product.brand.toLowerCase()] = (brandCounts[product.brand.toLowerCase()] || 0) + 1; });
+  products.forEach(function(product) { const key = normalizeAdminBrand(product.brand); brandCounts[key] = (brandCounts[key] || 0) + 1; });
+  const adminBrands = getAdminBrandOptions();
   brandWrap.innerHTML = '<button class="admin-filter-chip ' + (adminBrandFilter === "all" ? "active" : "") + '" data-admin-brand="all">ทุกแบรนด์ <b>' + products.length + '</b></button>' +
-    brandOptions.map(function(brand) { return '<button class="admin-filter-chip ' + (adminBrandFilter.toLowerCase() === brand.toLowerCase() ? "active" : "") + '" data-admin-brand="' + escapeHtml(brand) + '">' + escapeHtml(brand) + ' <b>' + (brandCounts[brand.toLowerCase()] || 0) + '</b></button>'; }).join("");
+    adminBrands.map(function(brand) { const key = normalizeAdminBrand(brand); return '<button class="admin-filter-chip ' + (normalizeAdminBrand(adminBrandFilter) === key ? "active" : "") + '" data-admin-brand="' + escapeHtml(brand) + '">' + escapeHtml(brand) + ' <b>' + (brandCounts[key] || 0) + '</b></button>'; }).join("");
+}
+
+function resetAdminFilters() {
+  adminTypeFilter = "all";
+  adminBrandFilter = "all";
+  const search = document.getElementById("adminSearch");
+  if (search) search.value = "";
+  renderAdmin();
 }
 
 function renderAdminArticles() {
@@ -835,6 +867,7 @@ document.getElementById("exportProductsBtn").addEventListener("click", exportPro
 document.getElementById("importProductsBtn").addEventListener("click", function() { document.getElementById("productImportInput").click(); });
 document.getElementById("productImportInput").addEventListener("change", importProductsFromXlsx);
 document.getElementById("adminSearch").addEventListener("input", renderAdmin);
+document.getElementById("resetAdminFilters").addEventListener("click", resetAdminFilters);
 document.getElementById("adminTypeFilters").addEventListener("click", function(event) {
   const button = event.target.closest("[data-admin-type]");
   if (!button) return;
